@@ -2,7 +2,7 @@ Design Review
 ===
 Author: Daniel Kingsbury
 
-### Summary
+### Summary:
 
 A Unity-inspired game authoring environment allowing game designers with no programming skills to build arcade-style 2D scrolling platformers using a variety of visual tools and minimal scripting.
 
