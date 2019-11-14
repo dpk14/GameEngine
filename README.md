@@ -31,9 +31,9 @@ To accommodate a different genre, we assume the author must know the syntax of t
 
 Instances extend these components with their own individual extended logic and specific component values. Scenes also contain a string that must initialize all the other non-object non-instance in the game, essentially describing the rules of interaction between objects -- and by extension -- their instances.
 
-### General Engine Analysis
+### General Engine Analysis:
 
-The API of the engine is two-edged. It contains a static part defining what kinds of objects can be created and what components they can have, accessible only through the ECS package. It also contains a dynamic part-- a few concise methods for updating a scene-- only accessible through the Controller class. The Player feeds instructions into the Controller in the form of string which
+The API of the engine is two-pronged. It contains a static part defining what kinds of objects can be created and what components they can have, accessible only through the ECS package. It also contains a dynamic part-- a few concise methods for updating a scene-- only accessible through the Controller class. The Player feeds instructions into the Controller in the form of string which
 the Engine parses into instances of a concise set of key data types in the Controller. 
 
 Some of these data types host sub-instructions which are parsed and distributed throughout the engine dynamically every new iteration of the game loop, propagating the Engine instance continually from the initial configuration. The Controller distributes the instructions in a predefined order by calling various methods of a group of handler classes, which are the vessels in which the instructions are placed and sent out to the tools the outer modules wished to access originally. 
@@ -55,13 +55,15 @@ These methods have direct access to engine getters so that they can read the cur
 
 Some of these methods were very particular, so at one point both the Player team and Engine team were alternating on developing the Player Stage (which has the game loop) so that we could integrate and ensure that the Player was getting the right components in the right way and setting them to parallel their front end counterparts. Alternatively, this should have only happened once. The engine should have only written one method in the Player that somehow bound the imageView variables (location x, location y, width, height, image filename) ONCE to their engine counterparts when the Controller is initialized, so that all updates to game object components in the engine every loop would automatically update the front end. This way, only an initialization method for synchronizing the player and engine, one key listener engine call, and one game loop engine call would be needed for the Player and Engine to communicate.
 
+
 ## Engine AI: 
 
 AIEvent is an abstract superclass that contains a bank of protected methods (and private helper methods) that can be used in synchronization to encode behavior in GameObjects. GameObjects carry strings in their Logic Component, which can be parsed and executed every loop, potentially calling some AI logic methods. The string parser does not have direct access to the AIEvent classes, but can access them through subclasses of AIEvents, which can call specific AIEvent protected methods when activated.
 
 This structure is coherent and cuts off privileged access from outside packages, minimizing dependency vry effectively. Furthermore, the methods are well-thought, many-layered, and take advantage of the extensibility of Components to create additional subclasses that provide the AI a wider variety of ways to interact with the states of GameObjects. For instance, I was easily able to create an AimComponent and LOSComponent (line of sight component) that allowed GameObjects the capability to shoot missiles. The methods in AI Event are concise and take advantage of multiple shared helper methods, for example, the general math methods for calculating and adjusting angles.
 
-### Engine Manager and Event Hierarchy
+
+### Engine Manager and Event Hierarchy:
 
 The Engine Manager and Event hierarchy mediate a lot of the syntactical rigidity of the engine's syntax. They require only that the caller execute the manager's call method and specify the Entity instance they would like to perform the Event on, the Event class they would like to activate, and its case-specific, potentially unlimited parameters. 
 
@@ -106,53 +108,37 @@ Scripting would remove the redundancy of events and allow the user to type out a
 The changes definitely improved the API, namely by making it extremely flexible. The Strings carried around by the Engine can contain
 any information the author wishes them to. 
 
-For the first week and a half, Entity-Component design was not even being used. We had a GameObject superclass and a hierarchy of
+For the first week and a half, Entity-Component design was not in our horizon. We had a GameObject superclass and a hierarchy of
 subclasses that specified unique extensions to this. But because some superclasses contained variables and methods that could be
-used by the same object, code was getting duplicated, and the superclass hierarchy was becoming to extensive. Entity-Component design made
-methods and features attachable and replaceable between objects. The Engine team shared anecdotes of times they had been pressured
-into code duplication by the existing model, so we discussed alternatives and one of our team members introduced the entity-component
-design pattern. Components classes were inevitably very passive, and simply packaged passive variables supplemented by getters
-and setters. However, these minor cons were easily outshined by the extensibility provided by ECS: GameObject defaults do not
-have to be hard-coded, and can be custom-defined by the author using the infinite combinations of components possible. Entity-Component
-design is clearly the superior design model.
-Data is saved and transferred concisely between modules solely through an instance of the Game object. The Game object contains a
-list of GameObjects, as well as a list of scenes, each of which contains a list of Instances, which are built from GameObjects.
-Alternatively, we were planning on the authoring environment directly creating the Engine Controller's key data types and saving them
-to file. Our concern was that there was no apparent way -- at least with Json -- to save these data structures directly to file.
-We could only get Json to save strings, so we were forced to represent our data types with Strings. The Engine team designed a Parser
-class with an abundance of adder methods, which can be called from a string to build the Maps and Sets the controller needs
-entry by entry. The consequence of this is that building the data types is a lot more inefficient (albeit seemingly inevitable with Json).
-In fact, it is somewhat painstaking. The syntax of the String has to be precise in order for Groovy to recognize it, and this leads
-to very menial and frustrating scriptwriting with no error checking in the authoring environment. I think it would have been wiser
-to research alternative ways of saving the data types to file, or maybe withdrawing from Json use.
+used by the same object, code was getting duplicated, and the superclass hierarchy was becoming to extensive. Entity-Component design made methods and features attachable and replaceable between objects. 
 
-Conclusions
-Reflect on what you have learned about designing programs through this project, using any code in the project as examples:
-Describe the best feature of the project's current design and what did you learn from reading or implementing it?
-Describe the worst feature that remains in the project's current design and what did you learn from reading or implementing it?
-Consider how your coding perspective and practice has changed during the semester:
-What is your biggest strength as a coder/designer?
-What is your favorite part of coding/designing?
-What are two specific things you have done this semester to improve as a programmer this semester?
-I think the best feature of our design is our minimal dependency, namely our ability to attach any kind of engine to the authoring
+The Engine team shared anecdotes of times they had been pressured into code duplication by the existing model, so we discussed alternatives and one of our team members introduced the entity-component design pattern. Components classes were inevitably very passive, and simply packaged passive variables supplemented by getters and setters. However, these minor cons were easily outshined by the extensibility provided by ECS: GameObject defaults do not have to be hard-coded, and can be custom-defined by the author using the infinite combinations of components possible. 
+
+Entity-Component design is clearly the superior design model. Data is saved and transferred concisely between modules solely through an instance of the Game object. The Game object contains a list of GameObjects, as well as a list of scenes, each of which contains a list of Instances, which are built from GameObjects.
+
+Alternatively, we were planning on the authoring environment directly creating the Engine Controller's key data types and saving them
+to file. Our concern was that there was no apparent way -- at least with JSON -- to save these data structures directly to file.
+We could only get JSON to save strings, so we were forced to represent our data types with Strings. The Engine team designed a Parser
+class with an abundance of adder methods, which can be called from a string to build the Maps and Sets the controller needs
+entry by entry. 
+
+### Conclusions
+
+The best feature of our design is our minimal dependency, namely our ability to attach any kind of engine to the authoring
 environment, and the fact that the engine has only one access point. Designing the Controller has given me a concept of how to create
 a concise API by creating controller-type classes to take in one or two data types from external modules and use that data type
 to perform internal method calls throughout the engine. It has also given me ideas about how to condense information into one
 well structured data type (in our case, the Game object) to be exchanged between modules.
-The worst feature of the project is by far the scripting reliance in the authoring environment. Having scripting capability is not an issue,
+
+The worst feature of the project is the scripting reliance in the authoring environment. Having scripting capability is not an issue,
 but there absolutely must be a better system of supplemental GUIs to guide the process of String creation, because game making is
 as of now a painstaking ordeal. I have learned to avoid using Strings alone to carry information, and in the future if I want to
 pass information with Strings, I will try to use them in conjunction with custom made classes which can easily interpret the contents
 of the String, requiring less precise and complex syntax from the user.
-I think that my biggest strength as a coder is in my
-adaptability. I am able to produce out-of-the box ideas quickly and test them quickly to determine whether they are worth using,
-and I am good at determining and accepting well in advance whether or not I should disband an idea. I write code that is
-usually easy to extend and refactor, so these changes tend not to be too revolutionary. My favorite part of coding is
-by far planning collaboratively. I am a very social person, and I also require knowing almost exactly what I will be implementing
-before I begin, otherwise my code will lack direction, conviction, and concision. Planning allows me to keep in touch with my
-big picture goals with a project, and reminds me of my purpose.
+
+My biggest strength as a coder is in my adaptability. I am able to produce out-of-the box ideas quickly and test them quickly to determine whether they are worth using, and I am good at determining and accepting well in advance whether or not I should disband an idea. I write code that is easy to extend and refactor, so these changes tend not to be too revolutionary. 
+
+My favorite part of coding is by far planning collaboratively. I'm very social, and I also require knowing almost exactly what I will be implementing before I begin, otherwise my code will lack direction, conviction, and concision. Planning allows me to keep in touch with my big-picture goals with a project, and reminds me of my purpose.
+
 One of the key strategies I've developed is locating portions of a design that can be isolated into a unified, independent
-part (a module or class hierarchy), and then minimizing the access points to this module from outside sources. Sometimes
-reducing access points prevents modules from accessing the full utility of a module, so this process must be very intentional
-and cautious. Another one of my strategies has been removing redundant code by locating duplicated or slightly parallel code that
-can be isolated into a separate helper method with shared access between the methods that appear to have duplication.
+part (a module or class hierarchy), and then minimizing the access points to this module. Sometimes reducing access points prevents modules from accessing the full utility of a module, so this process must be very intentional and cautious. 
