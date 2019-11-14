@@ -31,7 +31,7 @@ To accommodate a different genre, we assume the author must know the syntax of t
 
 Instances extend these components with their own individual extended logic and specific component values. Scenes also contain a string that must initialize all the other non-object non-instance in the game, essentially describing the rules of interaction between objects -- and by extension -- their instances.
 
-### Engine
+### General Engine Analysis
 
 The API of the engine is two-edged. It contains a static part defining what kinds of objects can be created and what components they can have, accessible only through the ECS package. It also contains a dynamic part-- a few concise methods for updating a scene-- only accessible through the Controller class. The Player feeds instructions into the Controller in the form of string which
 the Engine parses into instances of a concise set of key data types in the Controller. 
@@ -47,121 +47,66 @@ how the module wishes to use the event/component showcase (the toolkit).
 
 One design issue that needs to be fixed is the high number of public getters in setters in Components. These methods are necessary, because components are intended to be passive variable containers; we should have alternatively made the getters and setters protected and placed them in a package with a handler that could arbitrate their use.
 
-Describe two features that you implemented in detail — one that you feel is good and one that you feel could be improved:
-Justify why the code is designed the way it is or what issues you wrestled with that made the design challenging.
-First, I will discuss a feature I designed that I believe could be improved: the Engine Controller. Rather than giving other modules
-multiple access points to privileged internal tools, I condensed the access point into one class, the Controller class. The Controller
-is initialized by the Player, who gives it the Strings created by the authoring environment, after which the Engine parses these to create its
-starting data types that define the initial configuration of the system. While I feel that I localized the access sufficiently,
-I feel like there is some room for improvement. Ideally, every game loop, the Player would only have to call one engine.run
-method that would completely update the back end trackers and the contents of the Player interface. The Player does only call
-only one engine method in the loop, controller.updateScene() (outside the loop in the key listener, the Player also calls
-controller.parseKey()) but once the game loop calls this method, it calls methods to interpret the updated contents of the engine, which
-involves some dependencies. These methods have direct access to engine getters so that they can read the current state of the engine
-and ensure that the front end parallels it. Because they have access to the public getters, they also have access to the public setters,
-which is potentially much more power and responsibility than the Player should have. For instance, the Player gets the map of instances from the Engine after it updates the scene, then ensures its front end representations
-of the model instances in the engine are updated to reflect the changes exactly. Some of these methods were very particular, so at one point
-both the Player team and Engine team were alternating on developing the Player Stage (which has the game loop) so that we could
-integrate and ensure that the Player was getting the right components in the right way and setting them to parallel their
-front end counterparts. Alternatively, this should have only happened once. The engine should have only written one method
-in the Player that somehow bound the imageView variables (location x, location y, width, height, image filename) ONCE to their engine
-counterparts when the Controller is initialized, so that all updates to game object components in the engine every loop would
-automatically update the front end. This way, only an initialization method for synchronizing the player and engine, one key listener
-engine call, and one game loop engine call would be needed for the Player and Engine to communicate.
-Secondly, I will discuss a feature I designed that I believe is good: the AI Events. AIEvent is an abstract superclass that contains a bank of protected
-methods (and private helper methods) that can be used in synchronization to encode behavior in GameObjects. GameObjects carry strings in their
-Logic Component, which can be parsed and executed every loop, potentially calling some AI logic methods. The string parser does not have direct
-access to the AIEvent classes, but can access them through subclasses of AIEvents, which can call specific AIEvent protected methods when activated.
-This structure is coherent and cuts off privileged access from outside packages, minimizing dependency vry effectively. Furthermore, the methods are well-thought, many-layered, and
-take advantage of the extensibility of Components to create additional subclasses that provide the AI a wider variety of ways to interact with
-the states of GameObjects. For instance, I was easily able to create an AimComponent and LOSComponent (line of sight component) that allowed
-GameObjects the capability to shoot missiles. The methods in AI Event are concise and take advantage of multiple shared helper methods, for example,
-the general math methods for calculating and adjusting angles.
+The Engine Controller could stand to be improved. Rather than giving other modules multiple access points to privileged internal tools, I condensed the access point into one class, the Controller class. The Controller is initialized by the Player, who gives it the Strings created by the authoring environment, after which the Engine parses these to create its starting data types that define the initial configuration of the system. 
 
-Flexibilty
-Reflect on what makes a design flexible and extensible.
-Describe how the final API that you were most involved with balances
-Power (flexibility and helping users to use good design practices) and
-Simplicity (ease of understanding and preventing users from making mistakes)
+While I feel that I localized the access sufficiently, I feel like there is some room for improvement. Ideally, every game loop, the Player would only have to call one engine.run method that would completely update the back end trackers and the contents of the Player interface. The Player does only call only one engine method in the loop, controller.updateScene() (outside the loop in the key listener, the Player also calls controller.parseKey()) but once the game loop calls this method, it calls methods to interpret the updated contents of the engine, which involves some dependencies. 
+
+These methods have direct access to engine getters so that they can read the current state of the engine and ensure that the front end parallels it. Because they have access to the public getters, they also have access to the public setters, which is potentially much more power and responsibility than the Player should have. For instance, the Player gets the map of instances from the Engine after it updates the scene, then ensures its front end representations of the model instances in the engine are updated to reflect the changes exactly. 
+
+Some of these methods were very particular, so at one point both the Player team and Engine team were alternating on developing the Player Stage (which has the game loop) so that we could integrate and ensure that the Player was getting the right components in the right way and setting them to parallel their front end counterparts. Alternatively, this should have only happened once. The engine should have only written one method in the Player that somehow bound the imageView variables (location x, location y, width, height, image filename) ONCE to their engine counterparts when the Controller is initialized, so that all updates to game object components in the engine every loop would automatically update the front end. This way, only an initialization method for synchronizing the player and engine, one key listener engine call, and one game loop engine call would be needed for the Player and Engine to communicate.
+
+## Engine AI: 
+
+AIEvent is an abstract superclass that contains a bank of protected methods (and private helper methods) that can be used in synchronization to encode behavior in GameObjects. GameObjects carry strings in their Logic Component, which can be parsed and executed every loop, potentially calling some AI logic methods. The string parser does not have direct access to the AIEvent classes, but can access them through subclasses of AIEvents, which can call specific AIEvent protected methods when activated.
+
+This structure is coherent and cuts off privileged access from outside packages, minimizing dependency vry effectively. Furthermore, the methods are well-thought, many-layered, and take advantage of the extensibility of Components to create additional subclasses that provide the AI a wider variety of ways to interact with the states of GameObjects. For instance, I was easily able to create an AimComponent and LOSComponent (line of sight component) that allowed GameObjects the capability to shoot missiles. The methods in AI Event are concise and take advantage of multiple shared helper methods, for example, the general math methods for calculating and adjusting angles.
+
+### Engine Manager and Event Hierarchy
+
+The Engine Manager and Event hierarchy mediate a lot of the syntactical rigidity of the engine's syntax. They require only that the caller execute the manager's call method and specify the Entity instance they would like to perform the Event on, the Event class they would like to activate, and its case-specific, potentially unlimited parameters. 
+
+This standardized event-calling allows for maximum extensibility. If someone wants to extend the engine to have some more capabilities, they just find the location of the Event in the Event hierarchy, or they create their own package with a new abstract event superclass and a family of superclasses. The calling convention remains the same, because it takes unlimited parameters.
+
+First, the Manager class is instanced by the Controller and given access to some of the central game data -- namely the set of objects and maps of instances -- so it can handle interactions between objects and perform events on different object pairs. The Manager has a
+public .call method that is used to activate a general event. 
+
+Events are extended by InstanceDependentEvents, which are extended by ComponentDependentEvents, which are in turn extended by MotionEvent, AIEvent, AimModifierEvent, and HealthModifierEvent. Each of these requires different packages or classes, and takes different kinds of paramaters, but their calling procedure is standardized through the manager. 
+
+Dependency is minimized this way, because Events (and therefore the data types they influence) have privileged access only through the manager's call method, and events remain completely encapsulated from all outer management classes: even the Controller. The Events are only given the authority to impact Components, and contain methods which manipulate them in unique ways, sometimes in concert with other Components.
+
+
+### Flexibilty
+
 I am most responsible for designing the Engine API, specifically the Engine Controller's API (not the passive Component/Event API).
 This API only requires a String from the Player (loaded from a file) which it parses to initialize the data types it uses to track
-and update the objects in the scene. To the designer of a scripting-based authoring module, this is a very flexible API, because it allows the authoring
-to create based based on any kind of engine that is also based on scripting. However, if the designer also wishes to graduate from
-scripting (which the engine originally expected), they would have to create a GUI which allows the user to click buttons that
-efficiently write out strings under the hood that are exactly the correct syntax required for groovy to initialize the data with them.
-It is extremely tedious to write proper Groovy syntax, so creating this GUI was an ordeal that the authoring could not allocate enough
-time to complete on schedule. Now, the user has to experience this ordeal, and while they have maximum flexibility, the inefficiency outweighs
-the flexibility. It is very easy for a user to make an error, because designing an error checking mechanism --some kind of compiler-- for
-the engine script was an ordeal that the designing of the authoring environment did not have the time to take. It would require intimate knowledge
-of both Groovy scripting convention and the argument structures of Components and Events.
-Describe two features that you did not implement in detail — one that you feel is good and one that you feel could be improved:
-What is interesting about this code (why did you choose it)?
-What classes or resources are required to implement this feature?
-Describe the design of this feature in detail (what parts are closed? what implementation details are encapsulated? what assumptions are made? do they limit its flexibility?).
-How extensible is the design for this feature (is it clear how to extend the code as designed or what kind of change might be hard given this design)?
-The improvable feature I would like to discuss is the authoring's scripting reliance, which was developed through the terminal
-and a group of miniature scripting GUI's that guide the author through the game-making process. The engine's syntactically
-specific API requires the authoring to either create a compiler to correct and expedite the author's creation of scripts,
-or a vastly more extensive GUI to increase efficiency at the expense of the freedom script writing allows.
-This GUI would contain a hierarchy of buttons that create and append syntactically correct strings under the hood, which are then passed
-to the Engine. The authoring environment is very extensive as an isolated entity; it is very well styled and even has voice recognition
-capabilities, for instance. However, the designers prioritized applying challenging features over ensuring coherence and unity with other modules,
-and so a disproportionately low amount of time was allocated for the author to communicate extensively with the engine in order
-to understand and implement this compiler or script-writing GUI.
-The scripting feature is interesting in that the designers of the authoring environment minimized auth-engine dependencies
-so much that any engine is attachable and compatible in the place of the current one. No references at all are made to specific engine
-classes, so it is extremely encapsulated-- in fact, too encapsulated. The minimal points of access between the authoring and engine
-leaves the authoring environment too uninformed about the engine to take advantage of its full range of capabilities. Scripting
-is easy to extend because it serves as a foundational process -- a foundational philosophy of how data should be created and packaged
-for transfer (through Strings). Strings do not have to be manually created by the user, and independent, fully encapsulated GUIs
-can be appended to the authoring environment codebase that can write the Strings in a different way, after which the Strings are simply
-added to the terminal with the existing user code. The user can then have their choice of encapsulated GUI, or they can manually
-construct and tweak the results of their GUI creations, and the data is funneled through the same pathway (the terminal).
-The good feature I would like to discuss is the is the Manager and the Event hierarchy. This code is interesting in that it
-mediates a lot of the syntactical rigidity of the engine's syntax, instead requiring only that the caller call the manager's call
-method, and specify the event class you would like to activate by the call, the instance you are referring to, and the case-specific,
-potentially unlimited parameters of the event. This standardized event-calling allows for maximum extensibility; if someone
-wants to extend the engine to have some more capabilities, they just find the location of the Event in the Event hierarchy,
-or they create their own package with a new abstract event superclass and a family of superclasses. The calling convention
-remains the same, because it takes unlimited parameters.
-First, the Manager class is instanced by the Controller and given access to some of the central game data -- namely the set of objects and maps of
-instances -- so it can handle interactions between objects and perform events on different object pairs. The manager has a
-public .call method that is used to activate a general event. Events are extended by InstanceDependentEvents, which are extended by
-ComponentDependentEvents, which are in turn extended by MotionEvent, AIEvent, AimModifierEvent, and HealthModifierEvent.
-Each of these requires different packages or classes, and takes different kinds of paramaters, but their calling procedure is
-standardized through the manager. Dependency is minimized this way, because events (and therefore the data types they influence)
-have privileged access only through the manager's call method, and events remain completely encapsulated from all outer management
-classes, even the Controller. The Events are only given the authority to impact Components, and contain methods which manipulate them
-in unique ways, sometimes in concert with other Components.
+and update the objects in the scene. To the designer of a scripting-based authoring module, this is very flexible, because it allows the authoring to create based based on any kind of engine that is also based on scripting. 
 
-Alternate Designs
-Reflect on alternate designs for the project based on your analysis of the current design or project discussions.
-Describe an API that changed over the course of the project:
-Why was it changed and how much impact did the changes have on other parts of the project?
-How were the changes discussed and the decisions ultimately made?
-Do you feel the changes improved the API (or not) (i.e., did they make the API more abstract or more concrete? more encapsulated or not? more flexible or not?)?
-One of the APIs that has evolved hugely is the Event API. We originally relied heavily on a class called the Entity Manager, which behaved like a disorganized toolkit: it had the same
-access privileges as the Manager, but harbored a mess of unrelated public methods that handled all varieties of Components. As
-a consequence, it had direct, universal access to all the different Components, and could modify them freely. Events were simply
-a hierarchy of classes that redundantly wrapped Entity Manager methods so that these events could be stored in maps and triggered
-once the terms represented by the key were satisfied. We also had a hierarchy of Conditionals. Every event owned a List of Conditionals,
-and would only be activated if the conditionals were all satisfied.
-One of the designers of the authoring suggested that our event/conditional structure was redundant, and was forcing the engine to hard code
-all possible combinations of entity manager methods and wrap them despite the fact that they already existed and were fully functional on their own.
-He instead recommended Groovy scripting-- rather than storing events in maps, we stored Strings in maps, which could be parsed
+But there are setbacks to this design. The game script is developed through a combination of GUI tools and a console. The engine's syntactically specific API requires the authoring to either create a compiler to correct and expedite the author's creation of scripts,
+or a vastly more extensive GUI to increase efficiency at the expense of the freedom script writing allows. 
+
+The designers of the authoring environment minimized auth-engine dependencies so much that any engine is attachable and compatible in the place of the current one. No references at all are made to specific engine classes, so it is extremely encapsulated-- in fact, possibly too encapsulated. The minimal points of access between the authoring and engine leaves the authoring environment too uninformed about the engine to take advantage of its full range of capabilities. 
+
+However, scripting is easy to extend because it serves as a foundational process -- a foundational philosophy of how data should be created and packaged for transfer (through Strings). Strings do not have to be manually created by the user, and independent, fully encapsulated GUIs can be added to the authoring environment that can write the Strings in a different way, after which the Strings are simply added to the terminal with the existing user code. 
+
+
+### Alternate Designs
+
+One of the APIs that has evolved hugely from its original vision is the Event API. We originally relied heavily on a class called the Entity Manager, which behaved like a disorganized toolkit: it had the same access privileges as the Manager, but harbored a mess of unrelated public methods that handled all varieties of Components. As a consequence, it had direct, universal access to all the different Components, and could modify them freely. 
+
+Events were simply a hierarchy of classes that redundantly wrapped Entity Manager methods so that these events could be stored in maps and triggered once the terms represented by the key were satisfied. We also had a hierarchy of Conditionals. Every event owned a List of Conditionals, and would only be activated if the conditionals were all satisfied.
+
+One of the developers of the Authoring Environment suggested that our event/conditional structure was redundant, and was forcing the engine to hard-code all possible combinations of entity manager methods and wrap them despite the fact that they already existed and were fully functional on their own.
+
+He instead recommended Groovy scripting: rather than storing events in maps, we stored Strings in maps, which could be parsed
 to call any number of Entity Manager methods in any combination. This would obsolete Conditionals, which were essentially just ways
-of packaging basic boolean expressions. Scripting would remove the redundancy of events and allow the user to type out as complicated
-boolean conditionals as they pleased, rather than requiring the Engine to rewrite and hard-code some basic possibilities in the
-form of Conditionals. Once he proposed this to us, we discussed these pros separately and agreed to refactor. Later on, the Entity
-Manager was deprecated and broken up into a hierarchy of abstract Event subclasses with different families of protected methods
-available to them, but the element of scripting was remained, and now activates all events the same way through the Manager.call method.
+of packaging boolean expressions. 
+
+Scripting would remove the redundancy of events and allow the user to type out as complicated boolean conditionals as they pleased, rather than requiring the Engine to rewrite and hard-code some basic possibilities in the form of Conditionals. Once he proposed this to us, we discussed these pros separately and agreed to refactor. Later on, the Entity Manager was deprecated and organized into a hierarchy of abstract Event subclasses with different families of protected methods available to them. The element of scripting was remained, and now activates all events the same way through the Manager.call method.
+
 The changes definitely improved the API, namely by making it extremely flexible. The Strings carried around by the Engine can contain
-any information the author wishes them to.
-Describe two design decisions made during the project in detail:
-What alternate designs were considered?
-What are the trade-offs of the design choice (describe the pros and cons of the different designs)?
-Which would you prefer and why (it does not have to be the one that is currently implemented)?
-For the first week and a half, entity-component design was not even being used. We had a GameObject superclass and a hierarchy of
+any information the author wishes them to. 
+
+For the first week and a half, Entity-Component design was not even being used. We had a GameObject superclass and a hierarchy of
 subclasses that specified unique extensions to this. But because some superclasses contained variables and methods that could be
 used by the same object, code was getting duplicated, and the superclass hierarchy was becoming to extensive. Entity-Component design made
 methods and features attachable and replaceable between objects. The Engine team shared anecdotes of times they had been pressured
